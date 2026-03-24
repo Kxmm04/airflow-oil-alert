@@ -24,6 +24,10 @@ def send_line(msg: str):
     }
 
     res = requests.post(url, headers=headers, json=data, timeout=30)
+
+    print("LINE status:", res.status_code)
+    print("LINE body:", res.text)
+
     res.raise_for_status()
 
 def check_price():
