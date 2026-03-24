@@ -4,11 +4,23 @@ from datetime import datetime
 import os
 import json
 import requests
+from bs4 import BeautifulSoup
 
 FILE_PATH = "/tmp/last_price.json"
 
 def scrape_price():
-    return "TEST-PRICE"
+    url = "https://gasprice.kapook.com/gasprice.php"
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    res = requests.get(url, headers=headers, timeout=30)
+    print("HTTP status:", res.status_code)
+    print("Final URL:", res.url)
+    res.raise_for_status()
+
+    text = BeautifulSoup(res.text, "html.parser").get_text(" ", strip=True)
+    print("PAGE SAMPLE:", text[:1500])
+
+    return "DEBUG"
 
 def send_line(msg: str):
     token = os.getenv("LINE_TOKEN")
