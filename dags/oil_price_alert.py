@@ -2,36 +2,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 import os
-import json
 import requests
 from bs4 import BeautifulSoup
-
-FILE_PATH = "/tmp/last_price.json"
-
-
-def scrape_price():
-    url = "https://gasprice.kapook.com/gasprice.php"
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    res = requests.get(url, headers=headers, timeout=30)
-    print("HTTP status:", res.status_code)
-    print("Final URL:", res.url)
-    res.raise_for_status()
-
-    text = BeautifulSoup(res.text, "html.parser").get_text("\n", strip=True)
-
-    # ดูบรรทัดที่มีคำว่า 95
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    matched_lines = [line for line in lines if "95" in line or "ปตท" in line or "PTT" in line]
-
-    print("=== MATCHED LINES START ===")
-    for line in matched_lines[:50]:
-        print(line)
-    print("=== MATCHED LINES END ===")
-
-    # เอาแค่ทดสอบก่อน
-    return "DEBUG"
-
 
 def send_line(msg: str):
     token = os.getenv("LINE_TOKEN")
@@ -47,41 +19,32 @@ def send_line(msg: str):
         "messages": [
             {
                 "type": "text",
-                "text": msg,
+                "text": msg[:4900],
             }
         ]
     }
 
     res = requests.post(url, headers=headers, json=data, timeout=30)
-    print("LINE STATUS:", res.status_code)
-    print("LINE BODY:", res.text)
     res.raise_for_status()
 
-
 def check_price():
-    new_price = scrape_price()
+    url = "https://gasprice.kapook.com/gasprice.php"
+    headers = {"User-Agent": "Mozilla/5.0"}
 
-    if os.path.exists(FILE_PATH):
-        with open(FILE_PATH, "r", encoding="utf-8") as f:
-            old_price = json.load(f).get("price")
-    else:
-        old_price = None
+    res = requests.get(url, headers=headers, timeout=30)
+    res.raise_for_status()
 
-    print("OLD PRICE:", old_price)
-    print("NEW PRICE:", new_price)
+    text = BeautifulSoup(res.text, "html.parser").get_text("\n", strip=True)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    matched_lines = [line for line in lines if "95" in line or "ปตท" in line or "PTT" in line]
 
-    if new_price != old_price:
-        msg = f"🚗 ราคาน้ำมันเปลี่ยน!\nเก่า: {old_price}\nใหม่: {new_price}"
-        send_line(msg)
-
-    with open(FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump({"price": new_price}, f, ensure_ascii=False)
-
+    debug_text = "DEBUG KAPOOK\n\n" + "\n".join(matched_lines[:30])
+    send_line(debug_text)
 
 with DAG(
     dag_id="oil_price_alert",
     start_date=datetime(2024, 1, 1),
-    schedule="*/30 * * * *",
+    schedule=None,
     catchup=False,
 ) as dag:
     task = PythonOperator(
