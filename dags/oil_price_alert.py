@@ -33,15 +33,21 @@ def check_price():
 
     res = requests.get(url, headers=headers, timeout=30)
     res.raise_for_status()
-
-    # แก้ encoding
     res.encoding = res.apparent_encoding
 
     text = BeautifulSoup(res.text, "html.parser").get_text("\n", strip=True)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    matched_lines = [line for line in lines if "95" in line or "ปตท" in line or "PTT" in line]
 
-    debug_text = "DEBUG KAPOOK\n\n" + "\n".join(matched_lines[:30])
+    out = ["DEBUG KAPOOK"]
+    for i, line in enumerate(lines):
+        if "แก๊สโซฮอล์ 95" in line or "ราคาน้ำมัน ปตท." in line or "ราคานํ้ามัน ปตท." in line:
+            start = max(0, i - 3)
+            end = min(len(lines), i + 6)
+            out.append(f"\n--- BLOCK around line {i} ---")
+            for j in range(start, end):
+                out.append(f"{j}: {lines[j]}")
+
+    debug_text = "\n".join(out)
     send_line(debug_text)
 
 with DAG(
