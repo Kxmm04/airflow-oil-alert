@@ -11,9 +11,7 @@ FILE_PATH = "/tmp/last_prices_multi_brand.json"
 BRANDS = {
     "ปตท.": "ราคานํ้ามัน ปตท. (ptt)",
     "บางจาก": "ราคานํ้ามันบางจาก (bcp)",
-    "เชลล์": "ราคานํ้ามันเชลล์ (shell)",
     "พีที": "ราคานํ้ามันพีที (pt)",
-    "คาลเท็กซ์": "ราคานํ้ามันคาลเท็กซ์ (caltex)",
 }
 
 TARGETS = [
@@ -24,10 +22,10 @@ TARGETS = [
 ]
 
 FUEL_ICON = {
-    "แก๊สโซฮอล์ 95": "🟠",
-    "แก๊สโซฮอล์ 91": "🟢",
-    "แก๊สโซฮอล์ E20": "🟢",
-    "ดีเซล": "🔵",
+    "แก๊สโซฮอล์ 95": "•",
+    "แก๊สโซฮอล์ 91": "•",
+    "แก๊สโซฮอล์ E20": "•",
+    "ดีเซล": "•",
 }
 
 
@@ -170,22 +168,26 @@ def build_message(old_prices, new_prices):
         if not first_run:
             break
 
-    for brand in BRANDS:
+    brand_names = list(BRANDS.keys())
+
+    for idx, brand in enumerate(brand_names):
         lines.append(f"🏷️ {brand}")
         brand_old = old_prices.get(brand, {})
         brand_new = new_prices.get(brand, {})
 
         for fuel in TARGETS:
-            icon = FUEL_ICON.get(fuel, "•")
+            dot = FUEL_ICON.get(fuel, "•")
             old_price = brand_old.get(fuel)
             new_price = brand_new.get(fuel)
 
             if new_price is None:
-                lines.append(f"{icon} {fuel}  ไม่พบราคา")
+                lines.append(f"{dot} {fuel}  ไม่พบราคา")
             else:
                 change = diff_text(old_price, new_price)
-                lines.append(f"{icon} {fuel}  {new_price:.2f} บาท  {change}")
+                lines.append(f"{dot} {fuel}  {new_price:.2f} บาท  {change}")
 
+        if idx != len(brand_names) - 1:
+            lines.append("────────────")
         lines.append("")
 
     if first_run:
