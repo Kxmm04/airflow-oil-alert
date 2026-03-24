@@ -6,10 +6,17 @@ import json
 import requests
 from bs4 import BeautifulSoup
 
-FILE_PATH = "/tmp/last_price.json"
+FILE_PATH = "/tmp/last_prices.json"
+
+TARGETS = {
+    "แก๊สโซฮอล์ 95": "Gasohol 95",
+    "แก๊สโซฮอล์ 91": "Gasohol 91",
+    "แก๊สโซฮอล์ E20": "Gasohol E20",
+    "ดีเซล": "Diesel",
+}
 
 
-def scrape_price():
+def scrape_prices():
     url = "https://gasprice.kapook.com/gasprice.php"
     headers = {"User-Agent": "Mozilla/5.0"}
 
@@ -42,19 +49,17 @@ def scrape_price():
 
     ptt_lines = lines[start_idx:end_idx]
 
-    # หา "แก๊สโซฮอล์ 95" แล้วเอาบรรทัดถัดไปเป็นราคา
-    for i, line in enumerate(ptt_lines):
-        if line == "แก๊สโซฮอล์ 95":
-            if i + 1 < len(ptt_lines):
-                price = ptt_lines[i + 1]
-                # เช็กว่าหน้าตาเหมือนราคา
-                try:
-                    float(price)
-                    return price
-                except ValueError:
-                    raise ValueError(f'เจอ "แก๊สโซฮอล์ 95" แต่บรรทัดถัดไปไม่ใช่ราคา: {price}')
+    found = {}
 
-    raise ValueError("ไม่เจอราคาแก๊สโซฮอล์ 95 ของ ปตท.")
+    for i, line in enumerate(ptt_lines):
+        if line in TARGETS and i + 1 < len(ptt_lines):
+            next_line = ptt_lines[i + 1]
+            try:
+                found[line] = float(next_line)
+            except ValueError:
+                pass
+
+    return found
 
 
 def send_line(msg: str):
@@ -71,7 +76,7 @@ def send_line(msg: str):
         "messages": [
             {
                 "type": "text",
-                "text": msg,
+                "text": msg[:4900],
             }
         ]
     }
@@ -80,21 +85,58 @@ def send_line(msg: str):
     res.raise_for_status()
 
 
-def check_price():
-    new_price = scrape_price()
-
+def load_old_prices():
     if os.path.exists(FILE_PATH):
         with open(FILE_PATH, "r", encoding="utf-8") as f:
-            old_price = json.load(f).get("price")
-    else:
-        old_price = None
+            return json.load(f)
+    return {}
 
-    if new_price != old_price:
-        msg = f"🚗 ราคาน้ำมัน ปตท. (แก๊สโซฮอล์ 95) เปลี่ยน!\nเก่า: {old_price}\nใหม่: {new_price}"
+
+def save_new_prices(prices):
+    with open(FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(prices, f, ensure_ascii=False)
+
+
+def format_line(th_name, en_name, old_price, new_price):
+    if new_price is None:
+        return f"• {th_name} ({en_name}): ไม่พบราคา"
+
+    if old_price is None:
+        return f"• {th_name} ({en_name}): {new_price:.2f} บาท (รอบแรก)"
+
+    diff = round(new_price - old_price, 2)
+
+    if diff > 0:
+        return f"• {th_name} ({en_name}): {new_price:.2f} บาท ⬆️ +{diff:.2f}"
+    elif diff < 0:
+        return f"• {th_name} ({en_name}): {new_price:.2f} บาท ⬇️ {diff:.2f}"
+    else:
+        return f"• {th_name} ({en_name}): {new_price:.2f} บาท ➖ 0.00"
+
+
+def check_prices():
+    new_prices = scrape_prices()
+    old_prices = load_old_prices()
+
+    lines = []
+    changed = False
+
+    for th_name, en_name in TARGETS.items():
+        old_price = old_prices.get(th_name)
+        new_price = new_prices.get(th_name)
+
+        lines.append(format_line(th_name, en_name, old_price, new_price))
+
+        if old_price is None and new_price is not None:
+            changed = True
+        elif old_price is not None and new_price is not None and round(new_price - old_price, 2) != 0:
+            changed = True
+
+    if changed:
+        msg = "🚗 ราคาน้ำมัน ปตท. อัปเดต\n\n" + "\n".join(lines)
         send_line(msg)
 
-    with open(FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump({"price": new_price}, f, ensure_ascii=False)
+    save_new_prices(new_prices)
 
 
 with DAG(
@@ -105,5 +147,5 @@ with DAG(
 ) as dag:
     task = PythonOperator(
         task_id="check_price",
-        python_callable=check_price
+        python_callable=check_prices
     )
