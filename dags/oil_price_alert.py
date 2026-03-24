@@ -3,43 +3,12 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import os
 import json
-import re
 import requests
-from bs4 import BeautifulSoup
 
 FILE_PATH = "/tmp/last_price.json"
 
-
 def scrape_price():
-    url = "https://gasprice.kapook.com/gasprice.php"
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    res = requests.get(url, headers=headers, timeout=30)
-    res.raise_for_status()
-
-    text = BeautifulSoup(res.text, "html.parser").get_text(" ", strip=True)
-    print("PAGE SAMPLE:", text[:1500])
-
-    # เอาช่วง ปตท. ถึงก่อนบางจาก
-    start = text.find("ราคานํ้ามัน ปตท. (ptt)")
-    end = text.find("ราคานํ้ามันบางจาก (bcp)")
-
-    if start == -1:
-        raise ValueError("ไม่เจอหัวข้อ ปตท.")
-    if end == -1:
-        end = len(text)
-
-    ptt_text = text[start:end]
-    print("PTT SECTION:", ptt_text[:800])
-
-    match = re.search(r"แก๊สโซฮอล์ 95\s+(\d+\.\d+)", ptt_text)
-    if not match:
-        raise ValueError("ไม่เจอราคาแก๊สโซฮอล์ 95 ใน section ปตท.")
-
-    price = match.group(1)
-    print("FOUND PRICE:", price)
-    return price
-
+    return "TEST-PRICE"
 
 def send_line(msg: str):
     token = os.getenv("LINE_TOKEN")
@@ -61,10 +30,9 @@ def send_line(msg: str):
     }
 
     res = requests.post(url, headers=headers, json=data, timeout=30)
-    print("LINE STATUS:", res.status_code)
-    print("LINE BODY:", res.text)
+    print("LINE status:", res.status_code)
+    print("LINE body:", res.text)
     res.raise_for_status()
-
 
 def check_price():
     new_price = scrape_price()
@@ -79,12 +47,11 @@ def check_price():
     print("NEW PRICE:", new_price)
 
     if new_price != old_price:
-        msg = f"🚗 ราคาน้ำมัน ปตท. (แก๊สโซฮอล์ 95) เปลี่ยน!\nเก่า: {old_price}\nใหม่: {new_price}"
+        msg = f"🚗 ราคาน้ำมันเปลี่ยน!\nเก่า: {old_price}\nใหม่: {new_price}"
         send_line(msg)
 
     with open(FILE_PATH, "w", encoding="utf-8") as f:
         json.dump({"price": new_price}, f, ensure_ascii=False)
-
 
 with DAG(
     dag_id="oil_price_alert",
