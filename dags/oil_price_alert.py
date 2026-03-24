@@ -4,7 +4,6 @@ from datetime import datetime
 import os
 import requests
 
-
 def send_line(msg: str):
     token = os.getenv("LINE_TOKEN")
     if not token:
@@ -27,19 +26,15 @@ def send_line(msg: str):
     res = requests.post(url, headers=headers, json=data, timeout=30)
     res.raise_for_status()
 
-
 def check_price():
     send_line("✅ ทดสอบ Airflow + LINE สำเร็จ")
-
 
 with DAG(
     dag_id="oil_price_alert",
     start_date=datetime(2024, 1, 1),
-    schedule=None,   # ทดสอบ manual ก่อน
+    schedule=None,
     catchup=False,
-    tags=["line", "test"],
 ) as dag:
-
     check_price_task = PythonOperator(
         task_id="check_price",
         python_callable=check_price,
