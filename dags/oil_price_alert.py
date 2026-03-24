@@ -15,14 +15,20 @@ def scrape_price():
     headers = {"User-Agent": "Mozilla/5.0"}
 
     res = requests.get(url, headers=headers, timeout=30)
+    print("HTTP status:", res.status_code)
+    print("Final URL:", res.url)
     res.raise_for_status()
 
     soup = BeautifulSoup(res.text, "html.parser")
     text = soup.get_text(" ", strip=True)
 
+    print("PAGE TEXT SAMPLE:", text[:1000])
+
     match = re.search(r"แก๊สโซฮอล์\s*95.*?(\d+\.\d+)", text)
     if match:
-        return match.group(1)
+        price = match.group(1)
+        print("FOUND PRICE:", price)
+        return price
 
     raise ValueError("หาราคาแก๊สโซฮอล์ 95 ไม่เจอ")
 
@@ -47,6 +53,8 @@ def send_line(msg: str):
     }
 
     res = requests.post(url, headers=headers, json=data, timeout=30)
+    print("LINE status:", res.status_code)
+    print("LINE body:", res.text)
     res.raise_for_status()
 
 
@@ -58,6 +66,9 @@ def check_price():
             old_price = json.load(f).get("price")
     else:
         old_price = None
+
+    print("OLD PRICE:", old_price)
+    print("NEW PRICE:", new_price)
 
     if new_price != old_price:
         msg = f"🚗 ราคาน้ำมันเปลี่ยน!\nเก่า: {old_price}\nใหม่: {new_price}"
