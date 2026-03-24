@@ -34,6 +34,9 @@ def check_price():
     res = requests.get(url, headers=headers, timeout=30)
     res.raise_for_status()
 
+    # แก้ encoding
+    res.encoding = res.apparent_encoding
+
     text = BeautifulSoup(res.text, "html.parser").get_text("\n", strip=True)
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     matched_lines = [line for line in lines if "95" in line or "ปตท" in line or "PTT" in line]
