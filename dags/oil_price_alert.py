@@ -28,6 +28,18 @@ FUEL_ICON = {
     "ดีเซล": "•",
 }
 
+THAI_MONTHS = [
+    "", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+]
+
+
+def thai_date_text():
+    now = datetime.now()
+    thai_year = now.year + 543
+    thai_month = THAI_MONTHS[now.month]
+    return f"{now.day} {thai_month} {thai_year}"
+
 
 def normalize_line(line: str) -> str:
     return line.replace("ราคาน้ำมัน", "ราคานํ้ามัน").strip()
@@ -157,7 +169,7 @@ def has_change(old_prices, new_prices):
 
 
 def build_message(old_prices, new_prices):
-    now_text = datetime.now().strftime("%d/%m/%Y %H:%M")
+    now_text = thai_date_text()
 
     lines = [
         "⛽ อัปเดตราคาน้ำมัน",
