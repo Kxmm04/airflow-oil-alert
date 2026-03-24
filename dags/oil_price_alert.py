@@ -157,7 +157,13 @@ def has_change(old_prices, new_prices):
 
 
 def build_message(old_prices, new_prices):
-    lines = ["⛽ อัปเดตราคาน้ำมัน", ""]
+    now_text = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    lines = [
+        "⛽ อัปเดตราคาน้ำมัน",
+        f"📅 วันที่อัปเดต: {now_text}",
+        ""
+    ]
 
     first_run = True
     for brand in BRANDS:
