@@ -228,7 +228,7 @@ def check_prices():
 with DAG(
     dag_id="oil_price_alert",
     start_date=datetime(2024, 1, 1),
-    schedule="*/30 * * * *",
+    schedule="0 */3 * * *",
     catchup=False,
 ) as dag:
     task = PythonOperator(
